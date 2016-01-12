@@ -10,7 +10,7 @@ public class Launch {
 		BreadcrumbsDetector detector = new BreadcrumbsDetector();
 		try {
 			detector.load("http://www.nintendo-master.com/news/le-logo-du-25eme-anniversaire-de-sonic", DEFAULT_TIME_OUT);
-			System.out.println(detector.getResult());
+			System.out.println(detector.getResult().getTree());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

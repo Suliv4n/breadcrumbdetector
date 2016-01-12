@@ -4,8 +4,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.swing.tree.TreeNode;
+
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
@@ -433,26 +438,34 @@ public class BreadcrumbsCandidate{
 	/**
 	 * Affiche l'arbo les href des anchors sous forme d'arborescence.
 	 */
-	public void printArbo(){
+	public String getStringTree(){
 		
-		ArrayList<String> links = getUniqAnchorsAbsHref();		
-		
-
-		for(BreadcrumbsAnchor anchor : anchors){
-			String link = anchor.getElement().attr("abs:href");
-			if(!links.contains(link)){
-				links.add(link);
-			}
-		}
+		ArrayList<String> links = getUniqAnchorsAbsHref();
+		String tree = "";
 		
 		for(int i = 0; i<links.size(); i++){
 			String href = links.get(i);
 			String line = "";
 			for(int j = 0; j<=i;j++){
-				line += j == i ? "└" : " ";
+				line += i == j ? "" : " ";
 			}
-			System.out.println(line + href);
+			tree += line + href + "\n";
 		}
+		
+		return tree;
+	}
+	
+	public BreadCrumbsTree getTree(){
+		
+		BreadCrumbsTree root = new BreadCrumbsTree(anchors.get(0).getElement().attr("abs:href"), null);
+		BreadCrumbsTree previousNode = root;
+		
+		for(int i=1; i< anchors.size(); i++){
+			BreadCrumbsTree tree = new BreadCrumbsTree(anchors.get(i).getElement().attr("abs:href"), previousNode);
+			previousNode = tree;
+		}
+		
+		return root;
 	}
 	
 	/**
@@ -529,11 +542,13 @@ public class BreadcrumbsCandidate{
 	
 	@Override
 	public String toString(){
-		String string = "";
+		/*String string = "";
 		for(String href : getUniqAnchorsAbsHref()){
 			string += href + "\n";
 		}
 		
 		return string;
+		*/
+		return getStringTree();
 	}
 }
