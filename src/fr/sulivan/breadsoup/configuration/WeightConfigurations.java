@@ -1,5 +1,9 @@
 package fr.sulivan.breadsoup.configuration;
 
+/**
+ * Configuration pour le DefaultWeightEngine
+ *
+ */
 public class WeightConfigurations {
 	/**
 	 * Poids attribué lorque il y a un séparateur entre chaque lien.
@@ -34,7 +38,7 @@ public class WeightConfigurations {
 	/**
 	 * Poids si les liens ont le même host
 	 */
-	public static final int WEIGH_SAME_HOST_LINK = 50;
+	public static final int WEIGHT_SAME_HOST_LINK = 50;
 
 	/**
 	 * Poids attribué si les liens ont le même host.
@@ -46,7 +50,7 @@ public class WeightConfigurations {
 	 */
 	public static final int WEIGHT_FEW_CONTENT_AFTER = 100;
 
-	public static final int WEIGHT_LOGICAL_LINKS = 50;
+	public static final int WEIGHT_LOGICAL_ORDER_LINKS = 50;
 
 	/**
 	 * Poids attribué lorsque le texte du dernier élémement se retrouve dans le title de la page.

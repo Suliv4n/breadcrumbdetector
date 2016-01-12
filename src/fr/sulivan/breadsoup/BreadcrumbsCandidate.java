@@ -4,16 +4,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
-
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import fr.sulivan.breadsoup.configuration.Configurations;
-import fr.sulivan.breadsoup.configuration.WeightConfigurations;
 
 /**
  * Représente un élément considéré comme eventuelle breadcrumbs.
@@ -57,7 +53,7 @@ public class BreadcrumbsCandidate{
 	 * www.site.fr/rub/sousrub
 	 * www.site.fr/rub/sousrub/soussousrub
 	 */
-	private boolean logicalLinks = false;
+	private boolean logicalLinksOrder = false;
 
 	/*
 	 * Texte du dernier lien ou du dernier élément qui n'est pas un lien.
@@ -107,6 +103,7 @@ public class BreadcrumbsCandidate{
 				String currentHref = bca.getElement().attr("abs:href");
 				
 				try {
+					
 					URL previousUrl = new URL(previousHref);
 					URL currentUrl = new URL(currentHref);
 					if(!previousUrl.getHost().equals(context.getURL().getHost())){
@@ -117,17 +114,17 @@ public class BreadcrumbsCandidate{
 					String[] previousPath = previousUrl.getPath().split("/");
 
 					if(currentPath.length == previousPath.length+1){
-						logicalLinks = true;
+						logicalLinksOrder = true;
 						for(int i = 0; i<previousPath.length;i++){
 							if(!previousPath[i].equals(currentPath[i])){
-								logicalLinks = false;
+								logicalLinksOrder = false;
 								break;
 							}
 						}
 					}
 					
 				} catch (MalformedURLException e) {
-					e.printStackTrace();
+					//e.printStackTrace();
 				}
 
 
@@ -343,8 +340,12 @@ public class BreadcrumbsCandidate{
 	 * @return
 	 * 	le pourcentage de caractères des liens par rapport au nombre de caractères total de l'élément.
 	 */
-	private float getCharRate(){
+	protected float getCharRate(){
 		return (float) (float)anchorsCharsNumber / element.text().replaceAll("\\s|\\n", "").length() * 100;
+	}
+	
+	public boolean linksHaveSameHost(){
+		return sameHost;
 	}
 	
 	/**
@@ -358,7 +359,7 @@ public class BreadcrumbsCandidate{
 	 * @return
 	 * 	Vrai si l'attribut match la regex. Faux sinon.
 	 */
-	private boolean checkContainerAttr(String attr, String regex){
+	public boolean checkContainerAttr(String attr, String regex){
 		Element container = this.element;
 		do{
 			
@@ -389,39 +390,12 @@ public class BreadcrumbsCandidate{
 	 * 
 	 */
 	protected void giveWeight(){
-		if(getCharRate() >= 95){
-			weight += WeightConfigurations.WEIGHT_NOT_IN_TEXT;
-		}
-		if(separator != null){
-			weight += WeightConfigurations.WEIGHT_HAS_SEPARATOR;
-		}
-		if(anchors.get(0).isHome()){
-			weight += WeightConfigurations.WEIGHT_FIRST_LINK_HOME;
-		}
-		if(checkContainerAttr("class", Configurations.CLASS_REGEX)){
-			weight += WeightConfigurations.WEIGHT_KEY_WORDS_MATCH_CLASS;
-		}
-		if(checkContainerAttr("id", Configurations.ID_REGEX)){
-			weight += WeightConfigurations.WEIGHT_KEY_WORDS_MATCH_ID;
-		}
-		if(isLegitTag()){
-			weight += WeightConfigurations.WEIGHT_LEGIT_TAGS;
-		}
-		if(sameHost){
-			weight += WeightConfigurations.WEIGHT_SAME_HOST;
-		}
-		
-		if(numberCharsAfter > numberCharBefore){
-			weight += WeightConfigurations.WEIGHT_FEW_CONTENT_AFTER;
-		}
-		if(logicalLinks){
-			weight += WeightConfigurations.WEIGHT_LOGICAL_LINKS;
-		}
-		if(titleMatchesCurrent()){
-			weight += WeightConfigurations.WEIGHT_TITLE_MATCH_LAST_ELEMENT;
-		}
+		weight = context.getWeigtEngine().process(this);
 	}
 	
+	public boolean isInTopContent(){
+		return numberCharsAfter > numberCharBefore;
+	}
 	
 	/**
 	 * Retourne vrai si le tagname de l'élément testé se trouve dans Configurations.LEGIT_BREADCRUMBS_TAGS.
@@ -432,7 +406,7 @@ public class BreadcrumbsCandidate{
 	 * @see fr.sulivan.breadsoup.configuration.Configurations
 	 * 
 	 */
-	private boolean isLegitTag() {
+	public boolean isLegitTag() {
 		return Arrays.asList(Configurations.LEGIT_BREADCRUMBS_TAGS).contains(element.tagName());
 	}
 
@@ -461,8 +435,9 @@ public class BreadcrumbsCandidate{
 	 */
 	public void printArbo(){
 		
-		ArrayList<String> links = new ArrayList<String>();		
+		ArrayList<String> links = getUniqAnchorsAbsHref();		
 		
+
 		for(BreadcrumbsAnchor anchor : anchors){
 			String link = anchor.getElement().attr("abs:href");
 			if(!links.contains(link)){
@@ -480,8 +455,15 @@ public class BreadcrumbsCandidate{
 		}
 	}
 	
-	
-	private boolean titleMatchesCurrent(){
+	/**
+	 * Retourne vrai si :
+	 * - Le texte dans le dernier élément "a" est dans le titre de la page (balise "title")
+	 * - Le texte du dernier élement non "a" est dans le titre de la page
+	 * 
+	 * @return
+	 * 	Vrai si le dernier élément "a" ou non "a" est dans le titre de la page.	
+	 */
+	public boolean titleMatchesCurrent(){
 		
 		Elements res = getContext().getDocument().select("head title");
 		String actifText = potentialCurrentText == null ? anchors.get(anchors.size() - 1).getElement().text() : potentialCurrentText;
@@ -495,5 +477,63 @@ public class BreadcrumbsCandidate{
 			return titleText.toLowerCase().matches(".*" + (Pattern.quote(actifText.toLowerCase())) + ".*");
 		}
 		return false;
+	}
+
+	/**
+	 * Retourne le séparateur entre chaque lien ou null si aucun séparateur n'a été detecté.
+	 * analyze() doit être appelé au préalable.
+	 * 
+	 * @return
+	 * 	le séparateur entre chaque lien ou null si aucun séparateur n'a été detecté.
+	 */
+	public String getSeparator() {
+		return separator;
+	}
+
+	/**
+	 * Retourne l'élément "a" dans le breadcrumbscandidate à l'index passé en paramètre.
+	 * 
+	 * @param i
+	 * 	Index de l'élément "a" à retourner.
+	 * @return
+	 * 	l'élément "a" dans le breadcrumbscandidate à l'index passé en paramètre.
+	 */
+	public BreadcrumbsAnchor getAnchors(int i) {
+		
+		return anchors.get(i);
+	}
+	
+	/**
+	 * Retourne les attributs "href" des liens qui composent le breadcrumbs en ne prenant pas comp^te des doublons.
+	 * Les urls sont converties en URL absolues
+	 * 
+	 * @return
+	 * 	Les attributs href (en absolue) des liens du BreadCrumbsCandidate 
+	 */
+	public ArrayList<String> getUniqAnchorsAbsHref(){
+		ArrayList<String> links = new ArrayList<String>();		
+		
+		for(BreadcrumbsAnchor anchor : anchors){
+			String link = anchor.getElement().attr("abs:href");
+			if(!links.contains(link)){
+				links.add(link);
+			}
+		}
+		
+		return links;
+	}
+	
+	public boolean isOrderLogic(){
+		return logicalLinksOrder;
+	}
+	
+	@Override
+	public String toString(){
+		String string = "";
+		for(String href : getUniqAnchorsAbsHref()){
+			string += href + "\n";
+		}
+		
+		return string;
 	}
 }

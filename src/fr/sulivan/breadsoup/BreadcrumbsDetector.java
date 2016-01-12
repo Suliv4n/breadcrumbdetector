@@ -10,12 +10,17 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import fr.sulivan.breadsoup.engine.ConfigurableWeightEngine;
+import fr.sulivan.breadsoup.engine.DefaultWeightEngine;
+
 public class BreadcrumbsDetector {
 
 
 	private Document document;
 	private ArrayList<BreadcrumbsCandidate> candidates;
 	private URL url;
+	
+	private ConfigurableWeightEngine weightEngine;
 	
 	public BreadcrumbsDetector(){
 		candidates = new ArrayList<BreadcrumbsCandidate>();
@@ -43,9 +48,6 @@ public class BreadcrumbsDetector {
 		
 	}
 	
-	
-
-	
 	/**
 	 * Retourne les éléments a qui sont dans l'éléments passés en paramètre.
 	 *  
@@ -65,6 +67,17 @@ public class BreadcrumbsDetector {
 		}
 		
 		return null;
+	}
+	
+	public void setWeigtEngine(ConfigurableWeightEngine weightEngine){
+		this.weightEngine = weightEngine;
+	}
+	
+	public ConfigurableWeightEngine getWeigtEngine(){
+		if(weightEngine == null){
+			weightEngine = new DefaultWeightEngine();
+		}
+		return weightEngine;
 	}
 	
 	/*
@@ -103,6 +116,7 @@ public class BreadcrumbsDetector {
 	/**
 	 * Retourne l'URL de la page à tester.
 	 * @return
+	 * 	l'URL de la page à tester.
 	 */
 	public URL getURL() {
 		return url;
