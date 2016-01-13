@@ -15,24 +15,67 @@ public class BreadCrumbsTree {
 		children = new ArrayList<BreadCrumbsTree>();
 		
 		if(parent != null){
-			parent.addChild(this);
+			parent.children.add(this);
 		}
 	}
 
-	private void addChild(BreadCrumbsTree child) {
-		children.add(child);
+	public BreadCrumbsTree addChild(String childurl) {
+		return new BreadCrumbsTree(childurl, this);
+	}
+	
+	private String createLine(int indent){
+		if(indent == 0){
+			return "";
+		}
+		
+		String line = "";
+		if(isLastChild()){
+			line = "└──";
+		}
+		else{
+			line = "├──";
+		}
+		for(int i=0; i<indent; i++){
+
+			if(getParentLevel(i+1).parent != null && !getParentLevel(i+1).isLastChild()){
+				line = "│  " + line;
+			}
+			else{
+				line = "   " + line;
+			}
+			
+		}
+		
+		
+		return line;
+	}
+	
+	private BreadCrumbsTree getParentLevel(int i){
+		if(i <= 0){
+			return this;
+		}
+		else{
+			int level = i;
+			BreadCrumbsTree res = parent;
+			while ( level > 1){
+				level--;
+				if(res != null){
+					res = res.parent;
+				}
+				else{
+					return null;
+				}
+			}
+			return res;
+		}
 	}
 	
 	public String stringTree(int indent){
-		String line = isRoot() || parent.isRoot() ? "├" : "│";
 
-		for(int i=0; i<indent-2; i++){
-			line += parent.isRoot() ? "───" : "   ";
-		}
 		String tree = "";
-		if(!isRoot()){
-			tree = line + (parent.isRoot() ? "───" : "└───") + link + "\n";
-		}
+
+		tree = createLine(indent) + link + "\n";
+
 		for(BreadCrumbsTree child : children){
 			tree += child.stringTree(indent+1);
 		}
@@ -43,11 +86,44 @@ public class BreadCrumbsTree {
 	private boolean isRoot() {
 		return parent == null;
 	}
+	
+	private boolean isLastChild(){
+		return parent.children.indexOf(this) == parent.children.size() - 1;
+	}
+	
+	public void mergeTree(BreadCrumbsTree branch){
+		BreadCrumbsTree exists = getNodeByUrl(branch.link);
+		if(getNodeByUrl(branch.link) != null){
+			for(BreadCrumbsTree node : branch.children){
+				exists.mergeTree(node);
+			}
+		}
+		else{
+			BreadCrumbsTree child = addChild(branch.link);
+			for(BreadCrumbsTree node : branch.children){
+				child.mergeTree(node);
+			}
+		}
+	}
+	
+	public BreadCrumbsTree getNodeByUrl(String url){
+		if(link.equals(url)){
+			return this;
+		}
+		else if(children.size() > 0){
+			for(BreadCrumbsTree node : children){
+				BreadCrumbsTree res = node.getNodeByUrl(url);
+				if( res != null){
+					return res;
+				}
+			}
+		}
+		return null;
+	}
 
 	@Override
 	public String toString(){
-		String string = link+"\n";
-		string += stringTree(1);
+		String string = stringTree(0);
 		
 		return string;
 	}

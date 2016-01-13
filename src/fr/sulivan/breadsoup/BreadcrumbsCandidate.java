@@ -4,12 +4,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.swing.tree.TreeNode;
 
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
